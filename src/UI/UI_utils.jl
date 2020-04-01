@@ -33,7 +33,7 @@ function setDefaults(commandDict)
     commandDict.s2["sflag"] = false
     commandDict.s2["wcount"] = 20
     commandDict.s2["anim"] = true
-    commandDict.s2["animstep"] = 50
+    commandDict.s2["animstep"] = 30
 
     return commandDict
 end

@@ -40,15 +40,15 @@ function runSim(commandDict,surf,curfield,nsteps,delvort,sim)
     while true
         if sim == "lve"
             println()
-            println(" Running LVE Simulation...")
+            println(" Running LVE Solver...")
             writeInterval = floor(nsteps/commandDict.s2["wcount"])
-            frames, IFR_field, mat = LVE(surf,curfield,nsteps,commandDict.s1["dt"],commandDict.s2["wcount"],"UI Window",1000,commandDict.s2["anim"],30,commandDict.s2["wflag"],writeInterval)
+            frames, IFR_field, mat = LVE(surf,curfield,nsteps,commandDict.s1["dt"],commandDict.s2["wcount"],"UI Window",1000,commandDict.s2["anim"],commandDict.s2["animstep"],commandDict.s2["wflag"],writeInterval)
             println("\t Done!")
             println()
             return mat
         elseif sim == "ldvm"
             println()
-            println(" Running LDVM Simulation...")
+            println(" Running LDVM Solver...")
             writeInterval = commandDict.s1["runtime"]/commandDict.s2["wcount"]
             commandDict.s2["wflag"] ? wflag = 1 : wflag = 0
             commandDict.s2["sflag"] ? sflag = 1 : sflag = 0
@@ -74,6 +74,7 @@ function plotResults(mat,subCmd)
     plotx = []
     matCol = ["t","alpha","h","u","lesp","cl","cd","cm"]
     matIdx = DataStructures.SortedDict{String,Any}(matCol[i] => i for i = 1:length(matCol))
+
     if haskey(matIdx,lowercase(subCmd)) # subcmd is plot type (infers only one plot to be calculated)
         plotCnt = 1
         ploty = [subCmd]

@@ -649,6 +649,33 @@ function update_kinem2DOF(surf::TwoDSurf, strpar :: TwoDOFPar, kinem :: KinemPar
     return surf, kinem
 end
 
+function panelGeo(surf)
+    vor_loc = zeros(surf.ndiv-1,2) # (x1,z1 ; x2,z2 ...) Inertial frame
+    coll_loc = zeros(surf.ndiv-1,2) # (x1,z1 ; x2,z2 ...)
+    # finds geometrical panel paramrters such as length, slope,
+    # collocation location, and vortex location
+    #   length of each panel
+    ds = sqrt.(( surf.x[1:end-1]-surf.x[2:end]).^2 + (surf.cam[1:end-1]-surf.cam[2:end]).^2)
+    #   Surf cam_slope does not give the correct panel locations
+    cam_slope = asind.((surf.cam[2:end]-surf.cam[1:end-1])./ds) # [deg]
+
+    # Normal vectors for each panel
+    n = hcat(-sind.(cam_slope),cosd.(cam_slope))
+    # Tangential vectors for each panel
+    tau = hcat(cosd.(cam_slope),sind.(cam_slope))
+
+    ## Vortex Locations
+    # Located at 25% of each panel
+    #   Vortex loactions (at 25% of panel length)
+    vor_loc[:,1] = surf.x[1:end-1] + .25 .* ds .* cosd.(cam_slope)
+    vor_loc[:,2] = surf.cam[1:end-1] + .25 .* ds .* sind.(cam_slope)
+    #   Collocation points (at 75% panel chordwise)
+    coll_loc[:,1] = surf.x[1:end-1] + .75 .* ds .* cosd.(cam_slope)
+    coll_loc[:,2] = surf.cam[1:end-1] + .75 .* ds .* sind.(cam_slope)
+
+    return ds, cam_slope, n, tau, vor_loc, coll_loc
+end
+
 function IFR(surf::TwoDSurf,x,z,t::Float64)
     # Given body frame and kinematics, find global positions
     alpha = surf.kindef.alpha(t)
@@ -751,7 +778,7 @@ function vor_BFR(surf::TwoDSurf,t,IFR_field::TwoDFlowField,curfield::TwoDFlowFie
     return curfield
 end
 
-function influence_coeff(surf::TwoDSurf,curfield::TwoDFlowField,coll_loc,n,dt,x_w,z_w)
+function influence_coeff(surf::TwoDSurf,coll_loc,n,x_w,z_w)
     # With the surface and flowfield, determine the influence matrix "a"
     a = zeros(surf.ndiv,surf.ndiv)
     a[end,:] .= 1. # for wake portion
@@ -784,7 +811,7 @@ function influence_coeff(surf::TwoDSurf,curfield::TwoDFlowField,coll_loc,n,dt,x_
     return a
 end
 
-function mod_influence_coeff(surf::TwoDSurf,curfield::TwoDFlowField,coll_loc,n,dt,x_w,z_w,x_lev,z_lev)
+function mod_influence_coeff(surf::TwoDSurf,coll_loc,n,x_w,z_w,x_lev,z_lev)
     # With the surface and flowfield, determine the influence matrix "a" including the
     # modifications needed to calculate the LEV strength
     a = zeros(surf.ndiv,surf.ndiv)

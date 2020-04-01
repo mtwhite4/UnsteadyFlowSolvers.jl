@@ -41,6 +41,7 @@ export
     EldUpInttstartDef,
     SinDef,
     CosDef,
+    LinearDef,
 
     # 2D low-order solver types
     TwoDSurf,
@@ -74,6 +75,9 @@ export
     makeForcePlots2D,
     makeVortPlots2D,
     subPlot,
+
+    # Decambering
+    decambFile,
 
     # XFOIL Wrapper
     xfoilWrapper,
@@ -110,5 +114,9 @@ include("UI/UI_main.jl")
 include("UI/UI_utils.jl")
 include("UI/s1Cmds.jl")
 include("UI/s2Cmds.jl")
+
+# Decambering
+include("decambering.jl")
+
 
 end

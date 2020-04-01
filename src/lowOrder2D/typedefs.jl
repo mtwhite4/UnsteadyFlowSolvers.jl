@@ -81,10 +81,7 @@ struct TwoDSurf
                 x[ib] = c/2. *(1-cos(theta[ib]))
             end
         elseif camberType == "linear"
-            dx = c / (ndiv-1)
-            for ib = 2:ndiv
-                x[ib] = x[ib-1] + dx
-            end
+            x = collect(range(0,stop = c, length = ndiv))
         end
 
         if (coord_file != "FlatPlate")

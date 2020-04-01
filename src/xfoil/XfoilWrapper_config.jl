@@ -6,27 +6,36 @@ XfoilWrapper.jl
     Input:  config file by name of Config.txt
     Output: Cn,Cm and polar file
 =#
-function xfoilWrapper(airfoil = "airfoil.dat", aRange::StepRange = 0:2:24, re = 3000000; xPath = "xfoil.exe", polarPath = "polar.txt", panels = 200, iter = 200,)
-
+function xfoilWrapper(cnfg::String = "bin/config.txt")
+    # import config file
+    cnfg = DelimitedFiles.readdlm(cnfg, String)
+    # airfoil
+    uppercase(cnfg[1,2]) == "NACA" ? airfoil = cnfg[1,3] : airfoil = cnfg[1,2]
+    re = cnfg[2,2] # Reynolds
+    mach = cnfg[3,2] # Mach #
+    changePanels = uppercase(cnfg[4,2]) .== "TRUE" # Manually change panels (otherwise runs PANE)
+        panels = cnfg[5,2] # Panels to change to
+    changeIter = uppercase(cnfg[6,2]) .== "TRUE" # change the number of iterations
+        iter = cnfg[7,2] # iteration count to change to
     # AoA range
-    aStart = aRange[1]
-    aEnd = aRange[end]
-    aStep = aRange[2] - aRange[1]
+    aStart = parse(Float32, cnfg[8,2])
+    aEnd = parse(Float32, cnfg[9,2])
+    aStep = parse(Float32, cnfg[10,2])
+    # XFOIL path
+    xPath = cnfg[11,2]
+    # Polar file path
+    polarPath = cnfg[12,2]
 
     #   --- Open XFOIL Pipe ---
     p=open(pipeline(`$xPath`),"r+")
     run(`rm -rf $polarPath`) # remove any old polar file
     # Write to pipe
-    if lowercase(airfoil) == "flatplate"
-        write(p,"NACA 0012\n") # use symmetrical airfoil for flatplate
-    else
-        write(p,"load $airfoil\n")
-    end
-    write(p,"ppar $panels\n\n")
+    length(airfoil) <= 5 ? write(p,"naca $airfoil\n") : write(p,"load $airfoil\n")
+    changePanels ? write(p,"ppar $panels\n\n") : write(p,"pane\n")
     write(p,"oper\n")
     write(p,"visc $re\n")
-    write(p,"iter $iter\n")
-    #write(p,"mach $mach\n")
+    if changeIter write(p,"iter $iter\n") end
+    write(p,"mach $mach\n")
     write(p,"pacc\n")
     write(p,"$polarPath\n\n")
     write(p,"aseq $aStart $aEnd $aStep\n")

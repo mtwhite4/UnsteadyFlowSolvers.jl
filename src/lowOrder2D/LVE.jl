@@ -14,7 +14,7 @@ function LVE(surf::TwoDSurf,curfield::TwoDFlowField,nsteps::Int64 = 500,dtstar::
     global relVel = zeros(surf.ndiv-1,2)
     IFR_vor = 0 .* vor_loc # Global frame
     IFR_field = TwoDFlowField()
-    IFR_surf = TwoDSurf(surf.coord_file,surf.pvt,surf.kindef,surf.lespcrit; ndiv = surf.ndiv, camberType = "linear")
+    IFR_surf = deepcopy(surf)
     global dp = zeros(surf.ndiv-1,1) # change in panel pressure
     frameStep = round((nsteps-1) / frameCnt) # Frames to capture animation on
     frameStep < 1 ? frameStep = 1 : frameStep
@@ -24,24 +24,8 @@ function LVE(surf::TwoDSurf,curfield::TwoDFlowField,nsteps::Int64 = 500,dtstar::
     TEVhist = hcat([],[])
     animMat = hcat([],[],[],[],[],[],[],[])
 
-    #   length of each panel
-    ds = sqrt.(( surf.x[1:end-1]-surf.x[2:end]).^2 + (surf.cam[1:end-1]-surf.cam[2:end]).^2)
-    #   Surf cam_slope does not give the correct panel locations
-    cam_slope = asind.((surf.cam[2:end]-surf.cam[1:end-1])./ds) # [deg]
-
-    # Normal vectors for each panel
-    n = hcat(-sind.(cam_slope),cosd.(cam_slope))
-    # Tangential vectors for each panel
-    tau = hcat(cosd.(cam_slope),sind.(cam_slope))
-
-    ## Vortex Locations
-    # Located at 25% of each panel
-    #   Vortex loactions (at 25% of panel length)
-    vor_loc[:,1] = surf.x[1:end-1] + .25 .* ds .* cosd.(cam_slope)
-    vor_loc[:,2] = surf.cam[1:end-1] + .25 .* ds .* sind.(cam_slope)
-    #   Collocation points (at 75% panel chordwise)
-    coll_loc[:,1] = surf.x[1:end-1] + .75 .* ds .* cosd.(cam_slope)
-    coll_loc[:,2] = surf.cam[1:end-1] + .75 .* ds .* sind.(cam_slope)
+    # panel geometry
+    ds, cam_slope, n, tau, vor_loc, coll_loc = panelGeo(surf)
 
     ## Critical gamma (LEV)
     x = 1 - 2*ds[1] / surf.c
@@ -69,7 +53,7 @@ function LVE(surf::TwoDSurf,curfield::TwoDFlowField,nsteps::Int64 = 500,dtstar::
 
         ## Influence Coeffcients
         x_w, z_w = BFR(surf, IFR_field.tev[end].x, IFR_field.tev[end].z, t)
-        global a = influence_coeff(surf,curfield,coll_loc,n,dtstar,x_w,z_w)
+        global a = influence_coeff(surf,coll_loc,n,x_w,z_w)
 
         ## RHS Vector
         RHS[end] = sum(prevCirc) # previous total circulation
@@ -120,7 +104,7 @@ function LVE(surf::TwoDSurf,curfield::TwoDFlowField,nsteps::Int64 = 500,dtstar::
 
             # Convert coords to BFR
             x_lev, z_lev = BFR(surf, IFR_field.lev[end].x, IFR_field.lev[end].z, t)
-            global a,a1 = mod_influence_coeff(surf,curfield,coll_loc,n,dtstar,x_w,z_w,x_lev,z_lev)
+            global a,a1 = mod_influence_coeff(surf,coll_loc,n,x_w,z_w,x_lev,z_lev)
 
             # Recalculate RHS
             # u_w, w_w
@@ -213,7 +197,7 @@ function LVE(surf::TwoDSurf,curfield::TwoDFlowField,nsteps::Int64 = 500,dtstar::
             # Cm = Cmz + Cmx
             cm = -sum( dp[j]*ds[j]*cosd(cam_slope[j])*(vor_loc[j,1]-surf.pvt) for j = 1:length(dp) ) / ndem + sum( dp[j]*ds[j]*sind(cam_slope[j])*vor_loc[j,2] for j = 1:length(dp) ) / ndem
 
-            mat = hcat(mat,[t, surf.kinem.alpha*180/pi, surf.kinem.h, surf.kinem.u, surf.a0[1], cl, cd, cm]) # Pressures and loads
+            mat = hcat(mat,[t, surf.kinem.alpha, surf.kinem.h, surf.kinem.u, surf.a0[1], cl, cd, cm]) # Pressures and loads
 
         end
         ## Wake Rollup

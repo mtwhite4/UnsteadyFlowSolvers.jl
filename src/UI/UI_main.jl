@@ -277,7 +277,9 @@ function runUI()
                     if o != nothing ; mat = o end
 
                 elseif usrCmd == "plot"
-                    plotResults(mat,subCmd)
+                    newmat = deepcopy(mat)
+                    newmat[:,2] = newmat[:,2].*180/pi # turn rad into deg
+                    plotResults(newmat,subCmd)
 
                 elseif usrCmd == "save" # Set step output file count
                     if mat != [] # mat has been defined
@@ -289,14 +291,18 @@ function runUI()
                 elseif usrCmd == "infoplot"
                     if mat != []
                         tt = plotTime(subCmd)
-                        makeKinemClVortPlots2D(mat,tt)
+                        if tt != nothing
+                            makeKinemClVortPlots2D(mat,tt)
+                        end
                     else
                         errorHandler(1,"A simulation must be ran before infoplots can be generated.")
                     end
 
                 elseif usrCmd == "vortplot"
                     tt = plotTime(subCmd)
-                    makeVortPlots2D(tt)
+                    if tt != nothing
+                        makeVortPlots2D(tt)
+                    end
 
                 end
             end
